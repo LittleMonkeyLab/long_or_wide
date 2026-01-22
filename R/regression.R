@@ -82,9 +82,16 @@ run_multiple_regression <- function(data, dv, predictors, covariates = NULL,
   vif_values <- NULL
   if (length(all_predictors) > 1) {
     tryCatch({
-      vif_values <- car::vif(model)
+      # Check if we have enough data and variation for VIF
+      # VIF requires at least 2 predictors and sufficient observations
+      if (nrow(model_data) > length(all_predictors) + 1) {
+        vif_values <- car::vif(model)
+      } else {
+        warning("Insufficient observations for VIF calculation")
+      }
     }, error = function(e) {
-      warning("Could not calculate VIF: ", e$message)
+      warning("Could not calculate VIF: ", e$message, 
+              ". This may occur with categorical predictors or collinearity issues.")
     })
   }
   

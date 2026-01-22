@@ -43,13 +43,15 @@ prepare_qualtrics <- function(data, remove_first_rows = 2,
   # Typically, response columns are numeric
   data <- data %>%
     dplyr::mutate(across(where(is.character), ~ {
-      # Try to convert to numeric, keep as character if fails
+      # Try to convert to numeric
       suppressWarnings({
         num_version <- as.numeric(.)
-        if (all(is.na(num_version)) && !all(is.na(.))) {
-          .
-        } else {
+        # If all values that exist fail to convert, keep as character
+        # If at least some values convert successfully, use numeric version
+        if (sum(!is.na(num_version)) > 0 || all(is.na(.))) {
           num_version
+        } else {
+          .
         }
       })
     }))

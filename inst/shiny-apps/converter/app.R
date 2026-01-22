@@ -113,7 +113,7 @@ server <- function(input, output, session) {
         
         # Generate code snippet
         code <- sprintf(
-          "library(tidyr)\nlibrary(dplyr)\n\n# Convert wide to long\nlong_data <- wide_data %%>%%\n  pivot_longer(\n    cols = c(%s),\n    names_to = \"%s\",\n    values_to = \"%s\"\n  )",
+          "library(tidyr)\nlibrary(dplyr)\n\n# Convert wide to long\nlong_data <- wide_data %>%%\n  pivot_longer(\n    cols = c(%s),\n    names_to = \"%s\",\n    values_to = \"%s\"\n  )",
           paste0("\"", value_cols, "\"", collapse = ", "),
           input$names_to,
           input$values_to
@@ -132,7 +132,7 @@ server <- function(input, output, session) {
         
         # Generate code snippet
         code <- sprintf(
-          "library(tidyr)\nlibrary(dplyr)\n\n# Convert long to wide\nwide_data <- long_data %%>%%\n  pivot_wider(\n    id_cols = c(%s),\n    names_from = \"%s\",\n    values_from = \"%s\"\n  )",
+          "library(tidyr)\nlibrary(dplyr)\n\n# Convert long to wide\nwide_data <- long_data %>%%\n  pivot_wider(\n    id_cols = c(%s),\n    names_from = \"%s\",\n    values_from = \"%s\"\n  )",
           paste0("\"", id_cols, "\"", collapse = ", "),
           input$names_from,
           input$values_from
