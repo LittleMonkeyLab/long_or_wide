@@ -1,0 +1,28 @@
+Package: longorwide
+Type: Package
+Title: Data Transformation and Analysis Tools for Wide and Long Formats
+Version: 0.1.0
+Authors@R: person("Author", "Name", email = "author@example.com", role = c("aut", "cre"))
+Description: Provides tools for converting between wide and long data formats,
+    importing Qualtrics data, reverse scoring items, and conducting common
+    statistical analyses including t-tests, ANOVA, and regression. Includes
+    a Shiny app for interactive data conversion.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
+Depends: 
+    R (>= 3.5.0)
+Imports:
+    shiny (>= 1.7.0),
+    tidyr (>= 1.2.0),
+    dplyr (>= 1.0.0),
+    stats,
+    psych (>= 2.0.0),
+    car (>= 3.0.0),
+    readr (>= 2.0.0)
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
