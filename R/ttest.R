@@ -15,8 +15,9 @@
 #'
 #' @return A list containing the t-test result and descriptive statistics
 #' @export
-#' @importFrom stats t.test
-#' @importFrom dplyr %>% group_by summarise
+#' @importFrom stats t.test sd
+#' @importFrom dplyr %>% group_by summarise n
+#' @importFrom rlang sym
 #'
 #' @examples
 #' # Between-subjects design
@@ -106,7 +107,3 @@ run_ttest <- function(data, design = c("within", "between", "multiple_trials"),
   
   return(list(result = result, descriptives = descriptives))
 }
-
-# Helper to use sym from rlang through dplyr
-#' @importFrom rlang sym
-NULL

@@ -10,7 +10,7 @@
 #'
 #' @return A list containing the regression model, summary, and diagnostics
 #' @export
-#' @importFrom stats lm formula
+#' @importFrom stats lm formula as.formula anova
 #' @importFrom dplyr %>% mutate across all_of
 #'
 #' @examples

@@ -1,0 +1,13 @@
+ResponseId,condition,item1,item2,item3,item4,item5
+ImportId,ImportId,ImportId,ImportId,ImportId,ImportId,ImportId
+"Rate your satisfaction","Experimental condition","I feel happy most of the time","I often feel sad (R)","I am content with my life","I frequently experience negative emotions (R)","I feel fulfilled"
+R_001,control,6,2,5,3,6
+R_002,control,5,3,4,4,5
+R_003,control,7,1,6,2,7
+R_004,treatment,7,2,7,2,7
+R_005,treatment,6,1,6,1,6
+R_006,treatment,5,3,5,3,6
+R_007,control,4,4,4,4,4
+R_008,control,6,2,5,3,5
+R_009,treatment,7,1,7,1,7
+R_010,treatment,6,2,6,2,6

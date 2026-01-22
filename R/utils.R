@@ -98,7 +98,9 @@ check_assumptions <- function(data, dv, group = NULL,
 #'
 #' @return A data frame with descriptive statistics
 #' @export
-#' @importFrom dplyr %>% group_by summarise across all_of
+#' @importFrom dplyr %>% group_by summarise across all_of n
+#' @importFrom stats sd median
+#' @importFrom rlang sym
 #'
 #' @examples
 #' data_desc <- data.frame(

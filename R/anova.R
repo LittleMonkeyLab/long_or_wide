@@ -12,7 +12,7 @@
 #'
 #' @return A list containing the ANOVA result and effect sizes
 #' @export
-#' @importFrom stats aov anova
+#' @importFrom stats aov anova as.formula
 #' @importFrom car Anova
 #'
 #' @examples
