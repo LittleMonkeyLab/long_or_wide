@@ -1,0 +1,350 @@
+---
+title: "Reverse Scoring Items"
+---
+
+## Why Reverse Scoring Matters
+
+Many psychological scales include **negatively-worded items** to:
+
+- Reduce response bias (prevent mindless agreement)
+- Check attention (inconsistent patterns may indicate careless responding)
+- Improve scale validity
+
+**Example:** A happiness scale might include:
+
+- Item 1: "I feel happy most of the time" (positive)
+- Item 2: "I often feel down" (negative - needs reverse scoring)
+- Item 3: "Life brings me joy" (positive)
+
+If someone "Strongly Agrees" (5) with Item 1 and Item 2, something is wrong - either they weren't paying attention, or you need to reverse score Item 2 before calculating a total.
+
+```{r}
+#| message: false
+library(tidyverse)
+```
+
+## The Reverse Scoring Formula
+
+For a scale from 1 to `max`:
+
+```
+reversed_score = (max + 1) - original_score
+```
+
+**Example:** 5-point scale (1-5)
+
+| Original | Reversed |
+|----------|----------|
+| 1        | 5        |
+| 2        | 4        |
+| 3        | 3        |
+| 4        | 2        |
+| 5        | 1        |
+
+For a 7-point scale: `reversed = 8 - original`
+
+For a 0-6 scale: `reversed = 6 - original` (min + max - original)
+
+## Method 1: Simple Arithmetic
+
+```{r}
+# Sample data with items to reverse
+data <- tibble(
+  participant_id = 1:5,
+  happy_1 = c(4, 5, 3, 4, 5),  # Positive: "I feel happy"
+  happy_2 = c(2, 1, 3, 2, 1),  # Negative: "I feel sad" - REVERSE
+  happy_3 = c(5, 4, 4, 5, 5),  # Positive: "Life is good"
+  happy_4 = c(1, 2, 2, 1, 2),  # Negative: "I feel down" - REVERSE
+  happy_5 = c(4, 5, 3, 4, 4)   # Positive: "I'm optimistic"
+)
+
+# Reverse score items 2 and 4 (5-point scale)
+data_reversed <- data |>
+  mutate(
+    happy_2_r = 6 - happy_2,
+    happy_4_r = 6 - happy_4
+  )
+
+data_reversed |> select(participant_id, happy_2, happy_2_r, happy_4, happy_4_r)
+```
+
+## Method 2: Using `across()` for Multiple Items
+
+When you have many items to reverse, use `across()`:
+
+```{r}
+# Define which items need reversing
+items_to_reverse <- c("happy_2", "happy_4")
+
+data_reversed <- data |>
+  mutate(
+    across(
+      all_of(items_to_reverse),
+      ~ 6 - .,
+      .names = "{.col}_r"  # Creates happy_2_r, happy_4_r
+    )
+  )
+
+# Check the reversals
+data_reversed |> select(participant_id, contains("happy_2"), contains("happy_4"))
+```
+
+## Method 3: Replace Original Values
+
+Sometimes you want to replace the original columns rather than create new ones:
+
+```{r}
+data_replaced <- data |>
+  mutate(
+    across(
+      c(happy_2, happy_4),
+      ~ 6 - .
+    )
+  )
+
+# Now happy_2 and happy_4 contain reversed values
+data_replaced
+```
+
+::: {.callout-warning}
+## Be Careful!
+Replacing original values can cause confusion later. Consider:
+
+1. Adding `_r` suffix to reversed columns
+2. Documenting which items were reversed
+3. Keeping a copy of the original data
+:::
+
+## Method 4: Creating a Reusable Function
+
+For complex projects with multiple scales:
+
+```{r}
+# Generic reverse scoring function
+reverse_score <- function(x, max_val) {
+  (max_val + 1) - x
+}
+
+# Use with mutate
+data_reversed <- data |>
+  mutate(
+    happy_2_r = reverse_score(happy_2, max_val = 5),
+    happy_4_r = reverse_score(happy_4, max_val = 5)
+  )
+
+# Or with across
+scale_max <- 5
+reverse_items <- c("happy_2", "happy_4")
+
+data_reversed <- data |>
+  mutate(
+    across(
+      all_of(reverse_items),
+      ~ reverse_score(., max_val = scale_max),
+      .names = "{.col}_r"
+    )
+  )
+```
+
+## Method 5: Using the `psych` Package
+
+The `psych` package has built-in reverse scoring:
+
+```{r}
+library(psych)
+
+# Select just the scale items
+scale_items <- data |> select(starts_with("happy"))
+
+# Create a keys vector: -1 for items to reverse, 1 for others
+keys <- c(1, -1, 1, -1, 1)  # Items 2 and 4 reversed
+
+# Use scoreItems or reverse.code
+reversed_items <- reverse.code(keys, scale_items)
+as_tibble(reversed_items)
+```
+
+## Checking Your Reverse Scoring
+
+### Check 1: Correlation Should Flip
+
+Reversed items should correlate negatively with original items:
+
+```{r}
+data_check <- data |>
+  mutate(happy_2_r = 6 - happy_2)
+
+# Original happy_2 (negative item) should correlate negatively with positive items
+cor(data_check$happy_2, data_check$happy_1)
+
+# Reversed happy_2_r should correlate positively with positive items
+cor(data_check$happy_2_r, data_check$happy_1)
+```
+
+### Check 2: Visual Inspection
+
+```{r}
+# Create comparison table
+data |>
+  mutate(happy_2_r = 6 - happy_2) |>
+  select(participant_id, happy_1, happy_2, happy_2_r) |>
+  knitr::kable()
+```
+
+### Check 3: Scale Reliability Should Improve
+
+Cronbach's alpha should be higher after proper reverse scoring:
+
+```{r}
+# Without reverse scoring (will be low or negative!)
+scale_wrong <- data |> select(happy_1:happy_5)
+alpha_wrong <- psych::alpha(scale_wrong, check.keys = FALSE)
+cat("Alpha without reverse scoring:", round(alpha_wrong$total$raw_alpha, 3), "\n")
+
+# With reverse scoring
+scale_correct <- data |>
+  mutate(
+    happy_2 = 6 - happy_2,
+    happy_4 = 6 - happy_4
+  ) |>
+  select(happy_1:happy_5)
+
+alpha_correct <- psych::alpha(scale_correct)
+cat("Alpha with reverse scoring:", round(alpha_correct$total$raw_alpha, 3))
+```
+
+## Complete Workflow Example
+
+Here's a full example processing a scale from Qualtrics:
+
+```{r}
+# Simulated Qualtrics export: 10-item anxiety scale (items 3, 5, 8 are reverse-scored)
+anxiety_data <- tibble(
+  participant_id = 1:10,
+  condition = rep(c("control", "treatment"), each = 5),
+  anx_1 = c(4, 5, 3, 4, 5, 3, 4, 2, 3, 4),
+  anx_2 = c(4, 4, 3, 5, 4, 3, 4, 2, 3, 5),
+  anx_3 = c(2, 1, 3, 2, 1, 3, 2, 4, 3, 2),  # Reverse: "I feel calm"
+  anx_4 = c(5, 5, 4, 4, 5, 4, 5, 3, 4, 4),
+  anx_5 = c(1, 2, 2, 1, 1, 2, 1, 3, 2, 1),  # Reverse: "I am relaxed"
+  anx_6 = c(4, 5, 3, 4, 5, 3, 4, 2, 3, 4),
+  anx_7 = c(4, 4, 4, 5, 4, 3, 4, 2, 3, 5),
+  anx_8 = c(2, 1, 3, 2, 2, 4, 2, 4, 3, 2),  # Reverse: "I feel at ease"
+  anx_9 = c(5, 4, 4, 4, 5, 3, 5, 2, 4, 4),
+  anx_10 = c(4, 5, 3, 5, 4, 3, 4, 2, 3, 5)
+)
+
+# Step 1: Define reverse-scored items
+reverse_items <- c("anx_3", "anx_5", "anx_8")
+scale_max <- 5
+
+# Step 2: Reverse score
+anxiety_scored <- anxiety_data |>
+  mutate(
+    across(
+      all_of(reverse_items),
+      ~ (scale_max + 1) - .,
+      .names = "{.col}_r"
+    )
+  )
+
+# Step 3: Calculate composite using reversed items
+anxiety_scored <- anxiety_scored |>
+  rowwise() |>
+  mutate(
+    anxiety_total = mean(c(anx_1, anx_2, anx_3_r, anx_4, anx_5_r,
+                           anx_6, anx_7, anx_8_r, anx_9, anx_10))
+  ) |>
+  ungroup()
+
+# Step 4: Check reliability
+scale_for_alpha <- anxiety_scored |>
+  select(anx_1, anx_2, anx_3_r, anx_4, anx_5_r, anx_6, anx_7, anx_8_r, anx_9, anx_10)
+
+psych::alpha(scale_for_alpha)$total$raw_alpha
+
+# Step 5: View result
+anxiety_scored |>
+  select(participant_id, condition, anxiety_total)
+```
+
+## Special Cases
+
+### Scales Starting at 0
+
+For scales ranging from 0 to max (e.g., 0-6):
+
+```{r}
+# Formula: max - original (not max + 1 - original)
+data_zero <- tibble(
+  item = c(0, 1, 2, 3, 4, 5, 6),
+  reversed = 6 - item
+)
+data_zero
+```
+
+### Scales with Unusual Ranges
+
+For any scale from `min` to `max`:
+
+```{r}
+reverse_any_scale <- function(x, min_val, max_val) {
+  (min_val + max_val) - x
+}
+
+# Example: Scale from 2 to 8
+original <- c(2, 4, 5, 8)
+reversed <- reverse_any_scale(original, min_val = 2, max_val = 8)
+tibble(original, reversed)
+```
+
+### Dealing with NA Values
+
+Reverse scoring handles NA automatically:
+
+```{r}
+data_with_na <- tibble(
+  item = c(1, 2, NA, 4, 5)
+)
+
+data_with_na |>
+  mutate(item_r = 6 - item)
+```
+
+## Documentation Template
+
+Keep a record of your reverse scoring:
+
+```{r}
+#| eval: false
+# ==================================================
+# REVERSE SCORING DOCUMENTATION
+# ==================================================
+#
+# Scale: State Anxiety Inventory
+# Response format: 1 (Not at all) to 4 (Very much)
+# Reverse-scored items: 1, 2, 5, 8, 10, 11, 15, 16, 19, 20
+#
+# Formula used: 5 - original_score
+#
+# Items reversed:
+# - Item 1: "I feel calm" -> anx_1_r
+# - Item 2: "I feel secure" -> anx_2_r
+# - Item 5: "I feel at ease" -> anx_5_r
+# ... etc.
+#
+# Verification: Cronbach's alpha = 0.89 (acceptable)
+# ==================================================
+```
+
+## Summary: Best Practices
+
+1. **Know your scale** - What are the minimum and maximum values?
+2. **Document reversed items** - Keep a clear record
+3. **Create new columns** - Use `_r` suffix (e.g., `item3_r`)
+4. **Verify reversals** - Check correlations and alpha
+5. **Use consistent naming** - Makes composite creation easier
+
+## Next Steps
+
+Now that items are properly reverse scored, the next chapter covers creating composite scores (scale totals and means) and checking reliability with Cronbach's alpha.

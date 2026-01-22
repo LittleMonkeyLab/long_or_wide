@@ -1,0 +1,13 @@
+StartDate,EndDate,Status,Progress,Finished,ResponseId,condition,age,gender,wellbeing_1,wellbeing_2,wellbeing_3,wellbeing_4,wellbeing_5,outcome
+"Start Date","End Date","Response Type","Progress","Finished","Response ID","Condition","Age","Gender","I feel happy","I feel sad","I enjoy life","I feel down","I am optimistic","Outcome"
+"{""ImportId"":""startDate""}","{""ImportId"":""endDate""}","{""ImportId"":""status""}","{""ImportId"":""progress""}","{""ImportId"":""finished""}","{""ImportId"":""responseId""}","{""ImportId"":""condition""}","{""ImportId"":""age""}","{""ImportId"":""gender""}","{""ImportId"":""wellbeing_1""}","{""ImportId"":""wellbeing_2""}","{""ImportId"":""wellbeing_3""}","{""ImportId"":""wellbeing_4""}","{""ImportId"":""wellbeing_5""}","{""ImportId"":""outcome""}"
+2024-01-15 10:30:00,2024-01-15 10:35:00,IP Address,100,TRUE,R_1abc,control,22,Female,4,2,5,1,4,65
+2024-01-15 11:15:00,2024-01-15 11:22:00,IP Address,100,TRUE,R_2def,control,25,Male,5,1,4,2,5,72
+2024-01-15 12:00:00,2024-01-15 12:08:00,IP Address,100,TRUE,R_3ghi,treatment,21,Female,4,2,5,2,4,78
+2024-01-15 13:45:00,2024-01-15 13:52:00,IP Address,100,TRUE,R_4jkl,treatment,28,Male,5,1,5,1,5,85
+2024-01-15 14:30:00,2024-01-15 14:36:00,IP Address,100,TRUE,R_5mno,control,24,Female,3,3,4,2,4,68
+2024-01-15 15:00:00,2024-01-15 15:07:00,IP Address,100,TRUE,R_6pqr,treatment,26,Male,4,2,4,2,4,82
+2024-01-16 09:00:00,2024-01-16 09:05:00,Survey Preview,100,TRUE,R_7stu,control,30,Male,5,1,5,1,5,90
+2024-01-16 10:15:00,2024-01-16 10:22:00,IP Address,100,TRUE,R_8vwx,control,23,Female,4,2,4,2,4,70
+2024-01-16 11:00:00,2024-01-16 11:08:00,IP Address,100,TRUE,R_9yza,treatment,27,Male,5,1,5,1,5,88
+2024-01-16 12:30:00,2024-01-16 12:35:00,IP Address,75,FALSE,R_10bcd,treatment,24,Female,4,2,5,NA,NA,NA

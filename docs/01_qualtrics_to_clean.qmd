@@ -1,0 +1,482 @@
+---
+title: "Processing Qualtrics Exports"
+---
+
+## Understanding Qualtrics CSV Structure
+
+When you export data from Qualtrics as a CSV, you get a file with several quirks that need addressing before analysis.
+
+### The Three Header Rows Problem
+
+Qualtrics exports typically have **three rows** before your actual data:
+
+1. **Row 1:** Variable names (often codes like "Q1_1" or full question text)
+2. **Row 2:** Question text/labels
+3. **Row 3:** Import IDs (internal Qualtrics identifiers)
+
+```
+"StartDate","EndDate","Status","Q1","Q2_1","Q2_2","Q2_3"
+"Start Date","End Date","Response Type","How old are you?","I feel happy","I feel sad","I feel anxious"
+"{""ImportId"":""startDate""}","{""ImportId"":""endDate""}",...
+"2024-01-15 10:30:00","2024-01-15 10:35:00","IP Address","25","4","2","3"
+```
+
+### Common Qualtrics Columns
+
+| Column | Description | Usually Need? |
+|--------|-------------|---------------|
+| StartDate, EndDate | Timestamps | Rarely |
+| Status | IP Address, Survey Preview, etc. | For filtering |
+| IPAddress | Participant IP | No (privacy) |
+| Progress | Completion percentage | For filtering |
+| Duration (in seconds) | Time taken | Sometimes |
+| Finished | TRUE/FALSE | For filtering |
+| RecordedDate | When recorded | Rarely |
+| ResponseId | Unique response ID | Sometimes |
+| LocationLatitude/Longitude | Geolocation | Rarely |
+| DistributionChannel | How accessed | Rarely |
+| UserLanguage | Browser language | Rarely |
+| Q1, Q2, etc. | Your actual questions | Yes! |
+
+## Step-by-Step Cleaning Process
+
+### Step 1: Load the Data (Skipping Junk Rows)
+
+```{r}
+#| eval: false
+library(tidyverse)
+library(janitor)
+
+# Method 1: Skip the extra header rows
+raw_data <- read_csv(
+  "data/raw/qualtrics_export.csv",
+  skip = 3,  # Skip the 3 header rows
+  col_names = FALSE  # We'll add names manually or use first row
+)
+
+# Method 2: Read with headers, then remove rows 2-3
+raw_data <- read_csv("data/raw/qualtrics_export.csv")
+raw_data <- raw_data |>
+  slice(-c(1, 2))  # Remove rows 1-2 (which are really rows 2-3 of file)
+```
+
+::: {.callout-tip}
+## Best Practice
+Save your column names first, then apply them after removing junk rows:
+```{r}
+#| eval: false
+# Read just the header
+header_row <- read_csv("data/raw/qualtrics_export.csv", n_max = 0)
+col_names <- names(header_row)
+
+# Read data, skip 3 rows, apply names
+data <- read_csv(
+  "data/raw/qualtrics_export.csv",
+  skip = 3,
+  col_names = col_names
+)
+```
+:::
+
+### Step 2: Clean Column Names
+
+Qualtrics column names are often messy. The `janitor` package helps:
+
+```{r}
+#| eval: false
+# Before: "How old are you? - Selected Choice"
+# After: "how_old_are_you_selected_choice"
+
+data <- data |>
+  clean_names()
+```
+
+For more control, rename columns explicitly:
+
+```{r}
+#| eval: false
+data <- data |>
+  rename(
+    age = q1,
+    happy = q2_1,
+    sad = q2_2,
+    anxious = q2_3,
+    condition = fl_4_do  # Flow randomisation variable
+  )
+```
+
+### Step 3: Remove Metadata Columns
+
+```{r}
+#| eval: false
+data <- data |>
+  select(
+    -starts_with("recipient"),
+    -starts_with("location"),
+    -ip_address,
+    -external_reference,
+    -distribution_channel,
+    -user_language,
+    -starts_with("q_"),  # Qualtrics internal Q_ columns
+    -ends_with("_do")    # Display order columns (unless needed)
+  )
+```
+
+### Step 4: Filter Valid Responses
+
+```{r}
+#| eval: false
+data <- data |>
+  filter(
+    finished == TRUE,           # Only complete responses
+    status != "Survey Preview", # Remove test responses
+    progress == 100             # Alternative: 100% completion
+  )
+```
+
+::: {.callout-warning}
+## Check Your Filters
+Always check how many rows you're removing:
+```{r}
+#| eval: false
+# Before filtering
+nrow(data)
+
+# Check what you're removing
+data |> count(finished)
+data |> count(status)
+data |> filter(progress < 100) |> nrow()
+```
+:::
+
+### Step 5: Convert Data Types
+
+Qualtrics often exports numbers as text:
+
+```{r}
+#| eval: false
+# Convert specific columns
+data <- data |>
+  mutate(
+    age = as.numeric(age),
+    across(starts_with("q"), as.numeric),  # All Q columns
+    across(happy:anxious, as.numeric)      # Range of columns
+  )
+
+# Convert factors
+data <- data |>
+  mutate(
+    condition = factor(condition, levels = c("control", "treatment")),
+    gender = factor(gender)
+  )
+```
+
+### Step 6: Handle Text Responses
+
+If Qualtrics exported response labels instead of numbers:
+
+```{r}
+#| eval: false
+# Example: "Strongly Disagree" to 1, "Strongly Agree" to 5
+data <- data |>
+  mutate(
+    across(
+      happy:anxious,
+      ~ case_match(
+        .,
+        "Strongly Disagree" ~ 1,
+        "Disagree" ~ 2,
+        "Neither Agree nor Disagree" ~ 3,
+        "Agree" ~ 4,
+        "Strongly Agree" ~ 5
+      )
+    )
+  )
+```
+
+Or use a recoding function:
+
+```{r}
+#| eval: false
+recode_likert <- function(x) {
+  case_match(
+    x,
+    "Strongly Disagree" ~ 1,
+    "Disagree" ~ 2,
+    "Neither Agree nor Disagree" ~ 3,
+    "Agree" ~ 4,
+    "Strongly Agree" ~ 5,
+    .default = NA_real_
+  )
+}
+
+data <- data |>
+  mutate(across(happy:anxious, recode_likert))
+```
+
+## Complete Example Workflow
+
+Here's a complete script combining all steps:
+
+```{r}
+#| eval: false
+library(tidyverse)
+library(janitor)
+
+# ============================================
+# 1. LOAD DATA
+# ============================================
+
+# Read header for column names
+header <- read_csv("data/raw/qualtrics_export.csv", n_max = 0)
+
+# Read data, skipping Qualtrics metadata rows
+raw_data <- read_csv(
+  "data/raw/qualtrics_export.csv",
+  skip = 3,
+  col_names = names(header)
+)
+
+# ============================================
+# 2. INITIAL CLEANING
+# ============================================
+
+clean_data <- raw_data |>
+  # Clean column names (lowercase, underscores)
+  clean_names() |>
+
+  # Filter to complete, valid responses
+  filter(
+    finished == TRUE | finished == "TRUE",
+    status != "Survey Preview"
+  ) |>
+
+  # Remove unnecessary columns
+  select(
+    -start_date, -end_date, -status, -progress, -finished,
+    -recorded_date, -response_id,
+    -starts_with("recipient"),
+    -starts_with("location"),
+    -contains("ip_address"),
+    -distribution_channel, -user_language,
+    -any_of(c("external_reference", "external_data_reference"))
+  )
+
+# ============================================
+# 3. RENAME VARIABLES
+# ============================================
+
+clean_data <- clean_data |>
+  rename(
+    # Demographics
+    participant_id = response_id,  # Or create new ID
+    age = q1,
+    gender = q2,
+
+    # Experimental condition (from survey flow)
+    condition = fl_4_do,
+
+    # Scale items - example: 5-item wellbeing scale
+    wellbeing_1 = q3_1,
+    wellbeing_2 = q3_2,  # Reverse scored
+    wellbeing_3 = q3_3,
+    wellbeing_4 = q3_4,
+    wellbeing_5 = q3_5,
+
+    # Outcome measure
+    satisfaction = q4
+  )
+
+# ============================================
+# 4. CONVERT DATA TYPES
+# ============================================
+
+clean_data <- clean_data |>
+  mutate(
+    # Numeric conversions
+    age = as.numeric(age),
+    across(starts_with("wellbeing"), as.numeric),
+    satisfaction = as.numeric(satisfaction),
+
+    # Factor conversions
+    condition = factor(condition,
+                      levels = c("control", "treatment"),
+                      labels = c("Control", "Treatment")),
+    gender = factor(gender)
+  )
+
+# ============================================
+# 5. CREATE PARTICIPANT ID (if needed)
+# ============================================
+
+clean_data <- clean_data |>
+  mutate(participant_id = row_number(), .before = everything())
+
+# ============================================
+# 6. SAVE CLEANED DATA
+# ============================================
+
+write_csv(clean_data, "data/processed/clean_data.csv")
+
+# ============================================
+# 7. SUMMARY CHECK
+# ============================================
+
+# Quick check of the cleaned data
+glimpse(clean_data)
+summary(clean_data)
+```
+
+## Qualtrics Export Settings
+
+::: {.callout-tip}
+## Better Export = Easier Cleaning
+When exporting from Qualtrics, use these settings to make your life easier:
+
+1. **Download Data Table** (not legacy format)
+2. **Use numeric values** (not text labels)
+3. **Remove line breaks** from responses
+4. **Export as CSV** (UTF-8 encoding)
+
+In the export dialog:
+- Select "Use numeric values"
+- Uncheck "Use choice text"
+:::
+
+## Handling Common Qualtrics Features
+
+### Embedded Data
+
+If you passed variables into Qualtrics (e.g., from Prolific/MTurk):
+
+```{r}
+#| eval: false
+# These appear as regular columns, often at the start
+data <- data |>
+  rename(
+    prolific_pid = prolific_pid,  # Participant ID from Prolific
+    study_id = study_id,
+    session_id = session_id
+  )
+```
+
+### Randomised Conditions
+
+Qualtrics stores randomisation in columns like `FL_4_DO` (Flow Loop 4 Display Order):
+
+```{r}
+#| eval: false
+data <- data |>
+  mutate(
+    condition = case_match(
+      fl_4_do,
+      "FL_5" ~ "control",
+      "FL_6" ~ "treatment_a",
+      "FL_7" ~ "treatment_b"
+    )
+  )
+```
+
+### Attention Checks
+
+Filter based on attention check responses:
+
+```{r}
+#| eval: false
+data <- data |>
+  filter(
+    attention_check_1 == 4,  # Correct answer was 4
+    attention_check_2 == "blue"  # Correct answer was "blue"
+  )
+```
+
+### Timing Data
+
+Use timing to filter suspiciously fast responses:
+
+```{r}
+#| eval: false
+data <- data |>
+  filter(
+    duration_in_seconds > 120,  # At least 2 minutes
+    duration_in_seconds < 3600  # Less than 1 hour (remove abandoned)
+  )
+```
+
+### Loop & Merge Data
+
+If you used Loop & Merge (repeated measures), Qualtrics creates columns like:
+
+```
+Q1_1, Q1_2, Q1_3  # Same question for loops 1, 2, 3
+```
+
+You'll need to pivot this to long format (covered in Chapter 3).
+
+## Troubleshooting Common Issues
+
+### Issue: Numbers Read as Text
+
+```{r}
+#| eval: false
+# Check for non-numeric values
+data |>
+  filter(is.na(as.numeric(age))) |>
+  select(age) |>
+  distinct()
+
+# Common culprits: "Prefer not to say", empty strings, "N/A"
+data <- data |>
+  mutate(
+    age = na_if(age, "Prefer not to say"),
+    age = na_if(age, ""),
+    age = as.numeric(age)
+  )
+```
+
+### Issue: Special Characters in Column Names
+
+```{r}
+#| eval: false
+# janitor::clean_names() handles most cases
+# For remaining issues:
+names(data) <- str_replace_all(names(data), "[^[:alnum:]_]", "_")
+```
+
+### Issue: Duplicate Responses
+
+```{r}
+#| eval: false
+# Check for duplicates
+data |>
+  group_by(prolific_pid) |>
+  filter(n() > 1)
+
+# Keep only first response
+data <- data |>
+  group_by(prolific_pid) |>
+  slice_head(n = 1) |>
+  ungroup()
+```
+
+## Summary Checklist
+
+Before moving to the next step, verify:
+
+- [ ] Metadata rows removed (only one header row)
+- [ ] Column names are clean and meaningful
+- [ ] Unnecessary columns removed
+- [ ] Only valid/complete responses included
+- [ ] Numeric columns are numeric type
+- [ ] Categorical variables are factors (with correct levels)
+- [ ] Participant ID column exists
+- [ ] Data saved to processed folder
+
+## Next Steps
+
+Now that your data is clean, you'll need to:
+
+1. **Understand optimal formats** (next chapter) - Know what shape your data needs
+2. **Reshape if necessary** - Convert between wide and long
+3. **Reverse score items** - Handle negatively-worded items
+4. **Create composite scores** - Calculate scale means/sums

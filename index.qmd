@@ -1,0 +1,60 @@
+---
+title: "From Raw Data to Analysis-Ready"
+---
+
+# Welcome {.unnumbered}
+
+This resource guides you through the complete journey of preparing data for statistical analysis in R. Whether you're working with survey data exported from Qualtrics or designing your own data collection, you'll learn how to structure and transform your data for:
+
+- **t-tests** (independent samples and paired/repeated measures)
+- **ANOVA** (one-way, factorial, and repeated measures)
+- **Multiple Regression** (including with covariates)
+
+## Two Starting Points
+
+This guide recognises two common scenarios:
+
+1. **You have Qualtrics data** - Learn to clean, reshape, and prepare messy survey exports
+2. **You're starting from scratch** - Understand optimal data formats before you even collect data
+
+## Learning Pathway
+
+```{mermaid}
+flowchart TD
+    A[Raw Qualtrics Export] --> B[Clean & Standardise]
+    C[Optimal Format Design] --> D[Data Collection]
+    D --> B
+    B --> E[Reverse Score Items]
+    E --> F[Create Composite Scores]
+    F --> G{Analysis Type?}
+    G -->|t-test| H[Prepare for t-test]
+    G -->|ANOVA| I[Prepare for ANOVA]
+    G -->|Regression| J[Prepare for Regression]
+    H --> K[Run Analysis]
+    I --> K
+    J --> K
+```
+
+## Prerequisites
+
+This resource assumes basic familiarity with R and RStudio. You should be comfortable with:
+
+- Installing and loading packages
+- Basic R syntax
+- Reading data into R
+
+## Packages Used
+
+Throughout this guide, we primarily use the tidyverse ecosystem:
+
+```r
+# Core packages
+library(tidyverse)  # Data manipulation and visualisation
+library(janitor)    # Data cleaning utilities
+library(psych)      # Reliability analysis (Cronbach's alpha)
+library(car)        # Assumption testing
+```
+
+## How to Use This Resource
+
+Each chapter builds on the previous one. Work through them sequentially, running the code in your own R session. Sample datasets are provided in the `data/` folder.

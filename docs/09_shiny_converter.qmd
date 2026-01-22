@@ -1,0 +1,111 @@
+---
+title: "Shiny Data Converter Tool"
+---
+
+## Overview
+
+A simple Shiny app to help convert between wide and long formats without writing code.
+
+::: {.callout-note}
+## Chapter Status: Placeholder
+This chapter will include:
+
+- Interactive Shiny app for data conversion
+- Upload CSV, select conversion type
+- Preview and download converted data
+- Code snippets generated for reproducibility
+:::
+
+## Planned Features
+
+### Upload and Preview
+
+- Upload CSV file
+- Automatic detection of potential ID columns
+- Preview first 10 rows
+
+### Wide to Long Conversion
+
+- Select columns to pivot
+- Name the new grouping variable
+- Name the new values variable
+- Preview result before download
+
+### Long to Wide Conversion
+
+- Select the names_from column
+- Select the values_from column
+- Preview result before download
+
+### Code Generation
+
+The app will generate R code so you can reproduce the transformation:
+```{r}
+#| eval: false
+# Generated code:
+library(tidyverse)
+
+data_long <- data |>
+  pivot_longer(
+    cols = c(score_t1, score_t2, score_t3),
+    names_to = "timepoint",
+    values_to = "score",
+    names_prefix = "score_"
+  )
+```
+
+## Coming Soon
+
+Interactive Shiny app embedded in this document or available as standalone application.
+
+```{r}
+#| eval: false
+# To run the app (once developed):
+# shiny::runApp("R/shiny_converter")
+```
+
+## Quick Reference: Code Snippets
+
+While the Shiny app is being developed, here are common conversion patterns:
+
+### Wide to Long
+
+```{r}
+#| eval: false
+# Basic
+data |>
+  pivot_longer(
+    cols = starts_with("score_"),
+    names_to = "time",
+    values_to = "score"
+  )
+
+# With prefix removal
+data |>
+  pivot_longer(
+    cols = starts_with("score_"),
+    names_to = "time",
+    values_to = "score",
+    names_prefix = "score_"
+  )
+```
+
+### Long to Wide
+
+```{r}
+#| eval: false
+# Basic
+data |>
+  pivot_wider(
+    names_from = time,
+    values_from = score
+  )
+
+# With prefix
+data |>
+  pivot_wider(
+    names_from = time,
+    values_from = score,
+    names_prefix = "score_"
+  )
+```

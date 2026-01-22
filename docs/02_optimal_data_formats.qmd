@@ -1,0 +1,421 @@
+---
+title: "Optimal Data Formats for Each Analysis"
+---
+
+## The Golden Rule
+
+::: {.callout-important}
+## Remember This
+**Between-subjects** factors stay as columns (wide format).
+**Within-subjects** factors become rows (long format).
+:::
+
+This chapter shows you exactly what your data should look like before running each type of analysis. If you're designing a study from scratch, set up your data collection to match these formats. If you have Qualtrics data, compare it to these templates to know what transformations you need.
+
+```{r}
+#| echo: false
+#| message: false
+library(tidyverse)
+```
+
+## t-test Data Formats
+
+### Independent Samples t-test
+
+**Design:** Two different groups of participants
+**Format:** Wide (one row per participant)
+
+```{r}
+#| echo: false
+indep_ttest <- tibble(
+  participant_id = 1:8,
+  group = rep(c("control", "treatment"), each = 4),
+  score = c(45, 48, 52, 47, 62, 58, 65, 61)
+)
+knitr::kable(indep_ttest, caption = "Independent samples t-test: Ready to analyse")
+```
+
+**R code to run the analysis:**
+
+```{r}
+#| eval: false
+# Formula interface (recommended)
+t.test(score ~ group, data = indep_ttest)
+
+# Or with separate vectors
+t.test(
+  indep_ttest$score[indep_ttest$group == "control"],
+  indep_ttest$score[indep_ttest$group == "treatment"]
+)
+```
+
+::: {.callout-note}
+## From Qualtrics
+This is the natural format from Qualtrics - participants are rows, condition is a column. You likely just need to clean and filter your data.
+:::
+
+### Paired Samples t-test
+
+**Design:** Same participants measured twice (pre/post, condition A/B, etc.)
+**Format:** Can be wide OR long, depending on function
+
+**Wide format (works with base R `t.test`):**
+
+```{r}
+#| echo: false
+paired_wide <- tibble(
+  participant_id = 1:5,
+  pre = c(45, 48, 52, 47, 50),
+  post = c(52, 55, 61, 53, 58)
+)
+knitr::kable(paired_wide, caption = "Paired t-test: Wide format")
+```
+
+```{r}
+#| eval: false
+# Base R with wide format
+t.test(paired_wide$pre, paired_wide$post, paired = TRUE)
+```
+
+**Long format (works with most modern packages):**
+
+```{r}
+#| echo: false
+paired_long <- tibble(
+  participant_id = rep(1:5, each = 2),
+  time = rep(c("pre", "post"), 5),
+  score = c(45, 52, 48, 55, 52, 61, 47, 53, 50, 58)
+)
+knitr::kable(paired_long, caption = "Paired t-test: Long format")
+```
+
+```{r}
+#| eval: false
+# Using rstatix (requires long format)
+library(rstatix)
+paired_long |>
+  t_test(score ~ time, paired = TRUE)
+```
+
+::: {.callout-tip}
+## Qualtrics Produces Wide
+Qualtrics naturally produces the wide format. If you measured "happiness" at pre and post, you'll have `happiness_pre` and `happiness_post` columns. This works directly with `t.test(..., paired = TRUE)`.
+:::
+
+## ANOVA Data Formats
+
+### One-way Between-Subjects ANOVA
+
+**Design:** Three or more independent groups
+**Format:** Wide (one row per participant)
+
+```{r}
+#| echo: false
+oneway_between <- tibble(
+  participant_id = 1:12,
+  treatment = rep(c("placebo", "low_dose", "high_dose"), each = 4),
+  outcome = c(45, 48, 47, 44,   # placebo
+              52, 55, 54, 51,   # low_dose
+              62, 65, 61, 64)   # high_dose
+)
+knitr::kable(oneway_between, caption = "One-way between-subjects ANOVA")
+```
+
+```{r}
+#| eval: false
+# Run the ANOVA
+model <- aov(outcome ~ treatment, data = oneway_between)
+summary(model)
+
+# Or using car for Type III SS
+library(car)
+Anova(lm(outcome ~ treatment, data = oneway_between), type = 3)
+```
+
+### One-way Repeated Measures ANOVA
+
+**Design:** Same participants measured under 3+ conditions
+**Format:** Long (one row per observation)
+
+```{r}
+#| echo: false
+oneway_rm <- tibble(
+  participant_id = rep(1:4, each = 3),
+  condition = rep(c("baseline", "week4", "week8"), 4),
+  score = c(45, 52, 58,   # participant 1
+            48, 55, 62,   # participant 2
+            42, 50, 55,   # participant 3
+            50, 58, 65)   # participant 4
+)
+knitr::kable(oneway_rm, caption = "Repeated measures ANOVA: Long format required")
+```
+
+```{r}
+#| eval: false
+# Using ez package
+library(ez)
+ezANOVA(
+  data = oneway_rm,
+  dv = score,
+  wid = participant_id,
+  within = condition
+)
+
+# Or using afex
+library(afex)
+aov_ez(
+  id = "participant_id",
+  dv = "score",
+  data = oneway_rm,
+  within = "condition"
+)
+```
+
+::: {.callout-warning}
+## Qualtrics Format Mismatch!
+Qualtrics exports this in wide format (baseline, week4, week8 as separate columns). You MUST convert to long format before analysis. See Chapter 3.
+:::
+
+### Factorial Between-Subjects ANOVA (2×2)
+
+**Design:** Two between-subjects factors
+**Format:** Wide (one row per participant)
+
+```{r}
+#| echo: false
+factorial_between <- tibble(
+  participant_id = 1:16,
+  drug = rep(c("placebo", "active"), each = 8),
+  therapy = rep(rep(c("none", "CBT"), each = 4), 2),
+  outcome = c(45, 48, 42, 47,   # placebo, no therapy
+              52, 55, 50, 54,   # placebo, CBT
+              48, 51, 46, 50,   # active, no therapy
+              68, 72, 65, 70)   # active, CBT
+)
+knitr::kable(factorial_between, caption = "2×2 Factorial ANOVA: Between-subjects")
+```
+
+```{r}
+#| eval: false
+# Factorial ANOVA
+model <- aov(outcome ~ drug * therapy, data = factorial_between)
+summary(model)
+```
+
+### Mixed ANOVA (Between × Within)
+
+**Design:** One between-subjects factor, one within-subjects factor
+**Format:** Long (one row per measurement occasion)
+
+Example: Treatment (between) × Time (within)
+
+```{r}
+#| echo: false
+mixed_anova <- tibble(
+  participant_id = rep(1:8, each = 3),
+  treatment = rep(c("control", "intervention"), each = 12),
+  time = rep(c("pre", "mid", "post"), 8),
+  score = c(
+    # Control group
+    45, 47, 46,   # P1
+    48, 49, 47,   # P2
+    42, 44, 43,   # P3
+    50, 51, 49,   # P4
+    # Intervention group
+    46, 55, 62,   # P5
+    49, 58, 68,   # P6
+    44, 52, 60,   # P7
+    51, 60, 70    # P8
+  )
+)
+knitr::kable(head(mixed_anova, 12), caption = "Mixed ANOVA: Long format (showing first 12 rows)")
+```
+
+```{r}
+#| eval: false
+# Using afex
+library(afex)
+aov_ez(
+  id = "participant_id",
+  dv = "score",
+  data = mixed_anova,
+  between = "treatment",
+  within = "time"
+)
+```
+
+::: {.callout-note}
+## The Key Difference
+- `treatment` (between-subjects): Each participant is in ONE condition
+- `time` (within-subjects): Each participant has MULTIPLE measurements
+
+Notice how `treatment` doesn't change within a participant, but `time` does.
+:::
+
+### Three-way Factorial ANOVA
+
+**Design:** Three between-subjects factors (e.g., 2×2×2)
+**Format:** Wide
+
+```{r}
+#| echo: false
+threeway <- tibble(
+  participant_id = 1:8,
+  factor_a = rep(c("A1", "A2"), each = 4),
+  factor_b = rep(rep(c("B1", "B2"), each = 2), 2),
+  factor_c = rep(c("C1", "C2"), 4),
+  outcome = c(45, 52, 48, 55, 62, 68, 58, 72)
+)
+knitr::kable(threeway, caption = "2×2×2 Factorial: Between-subjects")
+```
+
+```{r}
+#| eval: false
+model <- aov(outcome ~ factor_a * factor_b * factor_c, data = threeway)
+summary(model)
+```
+
+## Multiple Regression Data Formats
+
+### Simple Multiple Regression
+
+**Design:** Multiple predictors, one continuous outcome
+**Format:** Wide (one row per participant)
+
+```{r}
+#| echo: false
+regression_data <- tibble(
+  participant_id = 1:10,
+  age = c(22, 25, 28, 21, 35, 42, 29, 24, 31, 27),
+  education_years = c(14, 16, 18, 12, 20, 16, 17, 15, 19, 16),
+  hours_practice = c(5, 10, 15, 3, 20, 12, 18, 8, 22, 14),
+  performance_score = c(65, 72, 82, 58, 88, 75, 85, 70, 92, 78)
+)
+knitr::kable(regression_data, caption = "Multiple regression: Wide format")
+```
+
+```{r}
+#| eval: false
+model <- lm(performance_score ~ age + education_years + hours_practice,
+            data = regression_data)
+summary(model)
+```
+
+### Regression with Categorical Predictors
+
+**Design:** Mix of continuous and categorical predictors
+**Format:** Wide, with factors properly coded
+
+```{r}
+#| echo: false
+regression_cat <- tibble(
+  participant_id = 1:8,
+  age = c(22, 25, 28, 21, 35, 42, 29, 24),
+  gender = factor(c("female", "male", "female", "male",
+                    "female", "male", "female", "male")),
+  treatment = factor(c("control", "control", "treatment", "treatment",
+                       "control", "treatment", "treatment", "control")),
+  outcome = c(65, 72, 82, 78, 70, 85, 88, 68)
+)
+knitr::kable(regression_cat, caption = "Regression with categorical predictors")
+```
+
+```{r}
+#| eval: false
+# Ensure factors have appropriate reference levels
+regression_cat <- regression_cat |>
+  mutate(
+    gender = relevel(gender, ref = "male"),
+    treatment = relevel(treatment, ref = "control")
+  )
+
+model <- lm(outcome ~ age + gender + treatment, data = regression_cat)
+summary(model)
+```
+
+### Regression with Covariates (ANCOVA-style)
+
+**Design:** Main predictors plus covariates to control for
+**Format:** Wide
+
+```{r}
+#| echo: false
+ancova_style <- tibble(
+  participant_id = 1:8,
+  treatment = factor(rep(c("control", "intervention"), each = 4)),
+  pre_score = c(45, 48, 42, 50, 46, 47, 44, 49),  # Covariate
+  age = c(22, 25, 21, 28, 24, 26, 23, 27),        # Covariate
+  post_score = c(48, 52, 45, 54, 62, 65, 58, 68)  # Outcome
+)
+knitr::kable(ancova_style, caption = "ANCOVA-style regression: Wide format")
+```
+
+```{r}
+#| eval: false
+# Control for pre_score and age when examining treatment effect
+model <- lm(post_score ~ treatment + pre_score + age, data = ancova_style)
+summary(model)
+
+# Using car for Type III SS (for balanced interpretation)
+library(car)
+Anova(model, type = 3)
+```
+
+## Quick Reference: Format by Analysis
+
+| Analysis | Format | Participant Rows | Key Insight |
+|----------|--------|------------------|-------------|
+| Independent t-test | Wide | 1 per person | Group is a column |
+| Paired t-test | Wide or Long | 1 (wide) or 2 (long) | Wide works with base R |
+| One-way between ANOVA | Wide | 1 per person | Factor levels as column values |
+| One-way RM ANOVA | Long | K per person | K = number of conditions |
+| Factorial between ANOVA | Wide | 1 per person | Each factor is a column |
+| Mixed ANOVA | Long | K per person | K = number of within-levels |
+| Multiple regression | Wide | 1 per person | Each predictor is a column |
+
+## Optimal Qualtrics Survey Design
+
+If you're setting up a Qualtrics survey and want to minimize data wrangling:
+
+### For Between-Subjects Designs
+
+Use **Survey Flow Randomization** to assign conditions:
+
+1. Create a branch for each condition
+2. In each branch, set an **Embedded Data** field (e.g., `condition`)
+3. Export will have a clean `condition` column
+
+### For Within-Subjects Designs
+
+**Option A: Loop & Merge** (creates columns like `Q1_1`, `Q1_2`, `Q1_3`)
+
+- Easier to set up
+- Requires pivot to long format after export
+
+**Option B: Multiple Survey Blocks** with clear naming
+
+- More setup work
+- Still requires pivot to long format
+
+::: {.callout-tip}
+## Accept the Pivot
+For within-subjects designs, you will almost always need to convert from wide to long. This is normal and expected. Chapter 3 covers exactly how to do this.
+:::
+
+## Summary: The Decision Framework
+
+```{mermaid}
+flowchart TD
+    A[What type of analysis?] --> B{Any within-subjects<br/>factors?}
+    B -->|No| C[Stay Wide]
+    B -->|Yes| D[Convert to Long]
+    C --> E{What analysis?}
+    E -->|t-test| F[group + score columns]
+    E -->|ANOVA| G[factors + DV columns]
+    E -->|Regression| H[predictors + outcome columns]
+    D --> I[participant_id + condition + score]
+```
+
+## Next Steps
+
+Now you know what format you need. The next chapter shows you exactly how to convert between wide and long formats using `pivot_longer()` and `pivot_wider()`.

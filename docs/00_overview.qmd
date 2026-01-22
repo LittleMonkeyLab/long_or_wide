@@ -1,0 +1,270 @@
+---
+title: "Overview: Data Formats and Analysis Requirements"
+---
+
+## The Core Question: Wide or Long?
+
+Before diving into any analysis, you need to understand **data shape**. This is the single most important concept for preparing your data correctly.
+
+### Wide Format
+
+In **wide format**, each participant has ONE row, and repeated measurements appear in separate columns.
+
+```{r}
+#| echo: false
+library(tidyverse)
+
+# Example wide data
+wide_example <- tibble(
+  participant_id = c(1, 2, 3),
+  age = c(22, 25, 21),
+  condition = c("control", "treatment", "control"),
+  score_time1 = c(45, 52, 48),
+  score_time2 = c(47, 58, 51),
+  score_time3 = c(44, 61, 53)
+)
+
+knitr::kable(wide_example, caption = "Wide format: One row per participant")
+```
+
+### Long Format
+
+In **long format**, each observation has its own row. A participant with 3 measurements has 3 rows.
+
+```{r}
+#| echo: false
+long_example <- wide_example |>
+  pivot_longer(
+    cols = starts_with("score_time"),
+    names_to = "timepoint",
+    values_to = "score",
+    names_prefix = "score_"
+  )
+
+knitr::kable(long_example, caption = "Long format: One row per observation")
+```
+
+## Which Format for Which Analysis?
+
+This is the critical insight that will save you hours of frustration:
+
+| Analysis Type | Required Format | Why |
+|--------------|-----------------|-----|
+| Independent samples t-test | Wide | Comparing different groups (one row per person) |
+| Paired/repeated t-test | Long (usually) | Comparing same person at different times |
+| One-way between-subjects ANOVA | Wide | Comparing 3+ groups (one row per person) |
+| One-way repeated measures ANOVA | Long | Same person, multiple conditions |
+| Factorial between-subjects ANOVA | Wide | Multiple grouping variables |
+| Mixed ANOVA | Long | Between and within factors combined |
+| Multiple regression | Wide | Each predictor is a column |
+
+::: {.callout-important}
+## Key Insight
+**Qualtrics exports data in WIDE format.** This is often (but not always!) what you need. The challenge is knowing when to convert to long format and how to do it correctly.
+:::
+
+## The Two Pathways
+
+### Pathway 1: You Have Qualtrics Data
+
+```{mermaid}
+flowchart LR
+    A[Qualtrics CSV] --> B[Remove metadata rows]
+    B --> C[Clean column names]
+    C --> D[Handle missing data]
+    D --> E[Reverse score items]
+    E --> F[Create composites]
+    F --> G{Need long format?}
+    G -->|Yes| H[Pivot to long]
+    G -->|No| I[Ready for analysis]
+    H --> I
+```
+
+**Challenges you'll face:**
+
+1. Qualtrics adds 2-3 header rows with metadata
+2. Column names are often long question text or codes like "Q4_1"
+3. Response options may be text ("Strongly Agree") not numbers
+4. Embedded data, timing, and metadata columns clutter the dataset
+
+### Pathway 2: Designing Optimal Data from Scratch
+
+If you can control how data is collected (or simulated), structure it optimally from the start:
+
+**For between-subjects designs:**
+```
+participant_id, group, dv
+1, control, 45
+2, treatment, 52
+3, control, 48
+```
+
+**For within-subjects designs:**
+```
+participant_id, condition, dv
+1, baseline, 45
+1, post, 52
+2, baseline, 48
+2, post, 55
+```
+
+**For factorial designs:**
+```
+participant_id, factor_a, factor_b, dv
+1, low, morning, 45
+2, low, evening, 52
+3, high, morning, 48
+4, high, evening, 55
+```
+
+## Data Requirements by Analysis
+
+### t-test Requirements
+
+**Independent samples t-test:**
+
+- One grouping variable (2 levels)
+- One continuous dependent variable
+- Each participant appears once
+- Format: Wide
+
+```{r}
+#| echo: false
+ttest_indep <- tibble(
+  participant_id = 1:6,
+  group = rep(c("control", "treatment"), each = 3),
+  score = c(45, 48, 42, 58, 62, 55)
+)
+knitr::kable(ttest_indep)
+```
+
+**Paired samples t-test:**
+
+- Same participants measured twice
+- Format: Can be wide OR long (depends on function used)
+
+```{r}
+#| echo: false
+# Wide version
+ttest_paired_wide <- tibble(
+  participant_id = 1:4,
+  pre_score = c(45, 48, 42, 50),
+  post_score = c(52, 55, 48, 58)
+)
+knitr::kable(ttest_paired_wide, caption = "Paired t-test: Wide format")
+```
+
+### ANOVA Requirements
+
+**One-way between-subjects ANOVA:**
+
+- One grouping variable (3+ levels)
+- One continuous DV
+- Format: Wide
+
+```{r}
+#| echo: false
+anova_oneway <- tibble(
+  participant_id = 1:9,
+  group = rep(c("control", "low_dose", "high_dose"), each = 3),
+  score = c(45, 48, 42, 52, 55, 50, 62, 65, 58)
+)
+knitr::kable(anova_oneway)
+```
+
+**Repeated measures ANOVA:**
+
+- Same participants across all conditions
+- Format: Long
+
+```{r}
+#| echo: false
+anova_rm <- tibble(
+  participant_id = rep(1:3, each = 3),
+  timepoint = rep(c("baseline", "week4", "week8"), 3),
+  score = c(45, 52, 58, 48, 54, 61, 42, 50, 55)
+)
+knitr::kable(anova_rm)
+```
+
+**Factorial ANOVA (2x2 between-subjects):**
+
+- Two grouping variables
+- Format: Wide
+
+```{r}
+#| echo: false
+anova_factorial <- tibble(
+  participant_id = 1:8,
+  drug = rep(c("placebo", "active"), each = 4),
+  therapy = rep(c("none", "CBT", "none", "CBT"), 2),
+  score = c(45, 52, 48, 58, 55, 68, 52, 72)
+)
+knitr::kable(anova_factorial)
+```
+
+### Multiple Regression Requirements
+
+- Multiple predictor variables (continuous or categorical)
+- One continuous outcome variable
+- Format: Wide (one row per participant)
+
+```{r}
+#| echo: false
+regression_example <- tibble(
+  participant_id = 1:6,
+  age = c(22, 25, 21, 28, 24, 26),
+  hours_study = c(10, 15, 8, 20, 12, 18),
+  motivation = c(4.2, 4.8, 3.5, 4.9, 4.0, 4.5),
+  test_score = c(72, 85, 65, 92, 78, 88)
+)
+knitr::kable(regression_example)
+```
+
+## Common Qualtrics Scenarios
+
+### Scenario 1: Simple Survey (Between-Subjects)
+
+You've surveyed participants, randomly assigning them to view one of two advertisements, then measuring their purchase intention.
+
+**Qualtrics gives you:** Wide format (perfect!)
+**You need:** Clean it, maybe create composite scores, then analyse
+
+### Scenario 2: Pre-Post Design
+
+Participants complete a baseline measure, undergo an intervention, then complete the same measure again.
+
+**Qualtrics gives you:** Wide format with `measure_pre` and `measure_post` columns
+**You need:** Convert to long format for repeated measures analysis
+
+### Scenario 3: Multiple Trials
+
+Participants respond to 10 different stimuli, rating each on several dimensions.
+
+**Qualtrics gives you:** Wide format with 10 × dimensions columns
+**You need:** Convert to long format where each trial is a row
+
+## Summary: The Decision Tree
+
+```{mermaid}
+flowchart TD
+    A[What analysis are you running?] --> B{Same participants<br/>measured multiple times?}
+    B -->|No| C[Keep Wide Format]
+    B -->|Yes| D{Using base R t.test<br/>with paired=TRUE?}
+    D -->|Yes| E[Can stay Wide]
+    D -->|No| F[Convert to Long]
+    C --> G[Clean and Analyse]
+    E --> G
+    F --> G
+```
+
+## Next Steps
+
+In the following chapters, we'll work through:
+
+1. **Cleaning Qualtrics exports** - Removing junk, fixing names, handling metadata
+2. **Understanding optimal formats** - What your data should look like
+3. **Reshaping data** - Converting between wide and long
+4. **Reverse scoring** - Handling negatively-worded items
+5. **Computing composites** - Creating scale scores and checking reliability
+6. **Preparing for each analysis** - Specific requirements for t-tests, ANOVA, regression

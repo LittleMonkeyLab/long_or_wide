@@ -1,0 +1,76 @@
+---
+title: "Creating Composite Scores and Checking Reliability"
+---
+
+## Overview
+
+After reverse scoring your items, the next step is to create composite scores (scale means or totals) and verify the internal consistency of your measures using Cronbach's alpha.
+
+::: {.callout-note}
+## Chapter Status: Placeholder
+This chapter is under development. It will cover:
+
+- Calculating scale means vs. totals
+- Using `rowMeans()` and `rowSums()`
+- Handling missing data in composites
+- Cronbach's alpha with the `psych` package
+- Interpreting alpha values
+- Item-total correlations
+- When to drop items
+:::
+
+## Topics to Be Covered
+
+### Creating Composite Scores
+
+```{r}
+#| eval: false
+# Mean composite (more common)
+data <- data |>
+  rowwise() |>
+  mutate(
+    wellbeing_mean = mean(c(wb_1, wb_2_r, wb_3, wb_4_r, wb_5), na.rm = TRUE)
+  ) |>
+  ungroup()
+
+# Sum composite
+data <- data |>
+  rowwise() |>
+  mutate(
+    wellbeing_total = sum(c(wb_1, wb_2_r, wb_3, wb_4_r, wb_5), na.rm = TRUE)
+  ) |>
+  ungroup()
+```
+
+### Checking Reliability
+
+```{r}
+#| eval: false
+library(psych)
+
+# Select scale items (with reverse-scored versions)
+scale_items <- data |>
+  select(wb_1, wb_2_r, wb_3, wb_4_r, wb_5)
+
+# Calculate alpha
+alpha_result <- alpha(scale_items)
+print(alpha_result)
+```
+
+### Interpreting Alpha
+
+| Alpha Value | Interpretation |
+|-------------|----------------|
+| > 0.90 | Excellent |
+| 0.80 - 0.89 | Good |
+| 0.70 - 0.79 | Acceptable |
+| 0.60 - 0.69 | Questionable |
+| < 0.60 | Poor |
+
+## Coming Soon
+
+Full worked examples with:
+
+- Multiple scales in one dataset
+- Decision rules for item removal
+- Reporting reliability in APA format

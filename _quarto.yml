@@ -1,0 +1,43 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "From Raw Data to Analysis-Ready: An R Guide"
+  subtitle: "Processing Qualtrics data for t-tests, ANOVA, and Regression"
+  author: "Data Analysis Learning Resources"
+  date: today
+  chapters:
+    - index.qmd
+    - part: "Part 1: Understanding Your Data"
+      chapters:
+        - docs/00_overview.qmd
+        - docs/01_qualtrics_to_clean.qmd
+        - docs/02_optimal_data_formats.qmd
+    - part: "Part 2: Data Transformation"
+      chapters:
+        - docs/03_wide_to_long.qmd
+        - docs/04_reverse_scoring.qmd
+        - docs/05_composites_reliability.qmd
+    - part: "Part 3: Preparing for Analysis"
+      chapters:
+        - docs/06_ttest_preparation.qmd
+        - docs/07_anova_preparation.qmd
+        - docs/08_regression_preparation.qmd
+    - part: "Part 4: Tools"
+      chapters:
+        - docs/09_shiny_converter.qmd
+
+format:
+  html:
+    theme: cosmo
+    code-fold: false
+    code-tools: true
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    highlight-style: github
+
+execute:
+  warning: false
+  message: false

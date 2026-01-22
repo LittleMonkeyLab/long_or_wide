@@ -1,0 +1,78 @@
+---
+title: "Preparing Data for Multiple Regression"
+---
+
+## Overview
+
+This chapter covers data preparation for multiple regression analysis, including handling categorical predictors and covariates.
+
+::: {.callout-note}
+## Chapter Status: Placeholder
+This chapter is under development. It will cover:
+
+- Data format for regression (always wide)
+- Continuous vs. categorical predictors
+- Coding categorical variables
+- Including covariates
+- Centering and standardising predictors
+- Assumption checking
+:::
+
+## Topics to Be Covered
+
+### Basic Multiple Regression
+
+**Data Format:** Wide (one row per participant, predictors as columns)
+
+```{r}
+#| eval: false
+# participant_id | predictor1 | predictor2 | outcome
+model <- lm(outcome ~ predictor1 + predictor2, data = my_data)
+summary(model)
+```
+
+### Categorical Predictors
+
+```{r}
+#| eval: false
+# Ensure proper factor coding
+my_data <- my_data |>
+  mutate(
+    group = factor(group, levels = c("control", "treatment")),
+    group = relevel(group, ref = "control")  # Set reference level
+  )
+
+model <- lm(outcome ~ group + age + education, data = my_data)
+```
+
+### Including Covariates (ANCOVA-style)
+
+```{r}
+#| eval: false
+# Control for pre_score when examining treatment effect
+model <- lm(post_score ~ treatment + pre_score, data = my_data)
+
+# Type III sums of squares
+library(car)
+Anova(model, type = 3)
+```
+
+### Centering Predictors
+
+```{r}
+#| eval: false
+my_data <- my_data |>
+  mutate(
+    age_centered = age - mean(age, na.rm = TRUE),
+    age_z = scale(age)[,1]  # Standardised (z-score)
+  )
+```
+
+## Coming Soon
+
+- Assumption checking (linearity, normality, homoscedasticity)
+- Multicollinearity (VIF)
+- Effect sizes (R², adjusted R², f²)
+- Interaction terms
+- Model comparison
+- Reporting in APA format

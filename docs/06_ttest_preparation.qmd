@@ -1,0 +1,75 @@
+---
+title: "Preparing Data for t-tests"
+---
+
+## Overview
+
+This chapter covers the final preparation steps specific to t-tests, including checking assumptions and structuring data for both independent and paired samples designs.
+
+::: {.callout-note}
+## Chapter Status: Placeholder
+This chapter is under development. It will cover:
+
+- Independent samples t-test data requirements
+- Paired samples t-test data requirements
+- Wide vs. long format considerations
+- Assumption checking (normality, homogeneity of variance)
+- Complete worked examples
+:::
+
+## Topics to Be Covered
+
+### Independent Samples t-test
+
+**Data Format Required:** Wide (one row per participant)
+
+```{r}
+#| eval: false
+# Data structure
+# participant_id | group | outcome
+# 1              | control | 45
+# 2              | treatment | 52
+
+# Run the test
+t.test(outcome ~ group, data = my_data)
+```
+
+### Paired Samples t-test
+
+**Data Format Options:**
+
+1. **Wide format** (works with base R)
+
+```{r}
+#| eval: false
+# participant_id | pre | post
+t.test(my_data$pre, my_data$post, paired = TRUE)
+```
+
+2. **Long format** (works with modern packages)
+
+```{r}
+#| eval: false
+# participant_id | time | score
+library(rstatix)
+my_data |> t_test(score ~ time, paired = TRUE)
+```
+
+### Assumption Checking
+
+```{r}
+#| eval: false
+# Normality
+shapiro.test(my_data$outcome)
+
+# Homogeneity of variance
+car::leveneTest(outcome ~ group, data = my_data)
+```
+
+## Coming Soon
+
+- Complete workflow from Qualtrics to t-test
+- Effect size calculation (Cohen's d)
+- Visualising group differences
+- Handling assumption violations
+- Multiple trials/items within conditions

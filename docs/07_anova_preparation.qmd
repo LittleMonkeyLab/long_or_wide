@@ -1,0 +1,80 @@
+---
+title: "Preparing Data for ANOVA"
+---
+
+## Overview
+
+This chapter covers data preparation for different ANOVA designs, from simple one-way to complex mixed designs.
+
+::: {.callout-note}
+## Chapter Status: Placeholder
+This chapter is under development. It will cover:
+
+- One-way between-subjects ANOVA
+- One-way repeated measures ANOVA
+- Factorial (2×2, 2×3, etc.) ANOVA
+- Mixed ANOVA (between × within)
+- Assumption checking
+- Post-hoc tests
+:::
+
+## Topics to Be Covered
+
+### One-way Between-Subjects ANOVA
+
+**Data Format:** Wide
+
+```{r}
+#| eval: false
+# participant_id | group | outcome
+model <- aov(outcome ~ group, data = my_data)
+summary(model)
+```
+
+### One-way Repeated Measures ANOVA
+
+**Data Format:** Long
+
+```{r}
+#| eval: false
+# participant_id | condition | score
+library(afex)
+aov_ez(id = "participant_id",
+       dv = "score",
+       data = my_data,
+       within = "condition")
+```
+
+### Factorial ANOVA
+
+**Data Format:** Wide (between-subjects factors)
+
+```{r}
+#| eval: false
+# participant_id | factor_a | factor_b | outcome
+model <- aov(outcome ~ factor_a * factor_b, data = my_data)
+summary(model)
+```
+
+### Mixed ANOVA
+
+**Data Format:** Long (for within-subjects factor)
+
+```{r}
+#| eval: false
+# participant_id | between_factor | within_factor | score
+library(afex)
+aov_ez(id = "participant_id",
+       dv = "score",
+       data = my_data,
+       between = "between_factor",
+       within = "within_factor")
+```
+
+## Coming Soon
+
+- Assumption testing (sphericity, homogeneity)
+- Effect sizes (eta-squared, partial eta-squared)
+- Post-hoc comparisons with corrections
+- Visualising ANOVA results
+- Reporting in APA format
